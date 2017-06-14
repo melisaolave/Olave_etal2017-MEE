@@ -1,0 +1,13 @@
+traits	species
+ind1	A
+ind2	A
+ind3	A
+ind4	B
+ind5	B
+ind6	B
+ind7	C
+ind8	C
+ind9	C
+ind10	D
+ind11	D
+ind12	D

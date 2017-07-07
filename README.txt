@@ -27,9 +27,7 @@ RECOMMENDATIONS BEFORE USING
 1. Note that this method is designed to be applied only to a small number of species, and we strongly recommend restricting the number of outgroups.
 If possible, we recommend that users incorporate the strategy described by Olave et al. (in press) for real data analyses (section 2.3), where individuals with a strong hybridization signature are removed prior to the species tree estimation, and later incorporated for preforming this test. This will prevent high underestimation of species divergence, and then results are more likely to be accurate.
 
-2. If there is missing data (an individual is not present a gene tree), the distribution of expected extra lineages for those gene trees with missing data should be estimated separated for this case (without this individual) and compare to this particular gene tree. 
-You should have some R program skills for doing this. Note that this will substantially increase the time consumption (since multiple distributions need to be estimated). Note that the current example does not accept missing data.
-
+2. High proportion of missing data is not recommend, because the expectations will be generated considering all individuals are represented in all gene trees. If possible, remove loci with missing data, but missing few individuals should have large impact.
 
 Any question, please refer to:
 Email: melisa.olave@uni-konstanz.de

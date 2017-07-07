@@ -135,34 +135,6 @@ gf.code2ms <- function(time=0, species1, species2, M=0, all.species){
   return(gf.code);
 }
 
-# get individual number from a fasta matrix and codify ms code
-  # this function can be useful when having missing data, but this is not implemented in the tutorial provided
-getTaxa2ms <- function(fileName, species, Imap){
-  # read fasta matrix
-  matrix <- scan(fileName, what="character", sep="\n");
-  seq.starts <- grep(pattern=">", x=matrix);
-  seq <- character();
-  taxa <- character();
-  taxaVec <- integer();
-  for(j in 1:length(seq.starts)){ # to get taxa names vector
-    if(j != max(length(seq.starts))){
-      sequence <- matrix[(seq.starts[j]+1):(seq.starts[j+1]-1)];
-    }else{
-      sequence <- matrix[(seq.starts[j]+1):length(matrix)];
-    }
-    taxa[j] <- matrix[seq.starts[j]];
-  }
-  taxa <- gsub(pattern=">", replacement="", x=taxa); # deleting ">"
-  
-  for (k in species){ # to recognize number of individuals to be simulated per species
-    subset <- Imap[Imap$species == k,];
-    ind <- as.character(subset$traits);
-    matched.taxa <- sum(ind %in% taxa);
-    taxaVec <- c(taxaVec, matched.taxa); # vector of number of individual per species from seq matrices
-  }
-  return <- taxaVec
-}
-
 # execute ms
 ms <- function(totalTaxa, nloci, species, taxaVec, ms.topology, gf.code = NULL, popSize.code = NULL, outputName){
   if(length(gf.code) >1){
@@ -190,7 +162,9 @@ writePhyloImap <- function(Imap, species, msTaxaNames = F, taxaVec = NULL){
     if(length(taxaVec) == 0){
       stop("To write PhyloImap using ms taxa names, you need to provide a taxaVec\n");
     }
-    taxaVec <- as.integer(unlist(strsplit(taxaVec, split=" ")));
+    if(is.integer(taxaVec) == FALSE){
+      taxaVec <- as.integer(unlist(strsplit(taxaVec, split=" ")));
+    }
     count <- 1;
     start <- 1;
     for(x in taxaVec){
@@ -239,9 +213,8 @@ sptree.vs.genetrees <- function(wd= getwd(), PhylonetDir = getwd(),
  
     
 # comparing real gene trees with model
-getLikelihood <- function(sptree, genetreeFile, distVec, sp.treeName = NULL,
-                          dist.topo = T, 
-                          Phylonet = F, PhylonetDir = getwd(), wd = getwd(),
+getLikelihood <- function(genetreeFile, distVec, sp.treeName = NULL,
+                          PhylonetDir = getwd(), wd = getwd(),
                           Imap, species, taxaVec, sptree.dir=getwd()){
   library(gmp);
   pVec <- numeric();
@@ -300,22 +273,48 @@ Lratio.test <- function(M0, M1, df){
   return(result);
 }
 
+# get individual number from a fasta matrix and codify ms code
+# this function can be useful if you want to increase accurancy because of missing data, but this is not implemented in the tutorial provided
+getTaxa2ms <- function(fileName, species, Imap){
+  # read fasta matrix
+  matrix <- scan(fileName, what="character", sep="\n");
+  seq.starts <- grep(pattern=">", x=matrix);
+  seq <- character();
+  taxa <- character();
+  taxaVec <- integer();
+  for(j in 1:length(seq.starts)){ # to get taxa names vector
+    if(j != max(length(seq.starts))){
+      sequence <- matrix[(seq.starts[j]+1):(seq.starts[j+1]-1)];
+    }else{
+      sequence <- matrix[(seq.starts[j]+1):length(matrix)];
+    }
+    taxa[j] <- matrix[seq.starts[j]];
+  }
+  taxa <- gsub(pattern=">", replacement="", x=taxa); # deleting ">"
+  
+  for (k in species){ # to recognize number of individuals to be simulated per species
+    subset <- Imap[Imap$species == k,];
+    ind <- as.character(subset$traits);
+    matched.taxa <- sum(ind %in% taxa);
+    taxaVec <- c(taxaVec, matched.taxa); # vector of number of individual per species from seq matrices
+  }
+  return <- taxaVec
+}
+
 ### get.pvalue  - this function will return only the probability vector (could be needed when having missing data)
 get.p <- function(sptree, genetreeFile, distVec, sp.treeName = NULL,
-                          dist.topo = T, 
-                          Phylonet = F, PhylonetDir = getwd(), dir = getwd(),
-                          Imap, species, taxaVec){
-  library(gmp);
+                  PhylonetDir = getwd(), sp.tree.wd = getwd(), genetree.wd = getwd(),
+                  Imap, species, taxaVec){
   pVec <- numeric();
   nVec <- integer();
   myDistVec <- integer();
   H <- length(distVec);
-  N <- length(genetreeFiles);
+  N <- length(genetreeFile);
   for(i in 1:N){
-    mygenetreeFile <- genetreeFiles[i];
+    mygenetreeFile <- genetreeFile[i];
     writePhyloImap(Imap, species, msTaxaNames = F, taxaVec = NULL);
     # comparing with real data
-    command <- paste("java -jar ", PhylonetDir, " deep_coal_count ", dir, "/", sp.treeName," ", dir, "/", mygenetreeFile, " -a PhyloImap.txt", sep="");
+    command <- paste("java -jar ", PhylonetDir, " deep_coal_count ", sp.tree.wd, "/", sp.treeName," ", genetree.wd, "/", mygenetreeFile, " -a PhyloImap.txt", sep="");
     mydeepcoal <- system(command, intern = T);
     myDist <- as.integer(gsub(pattern=".*lineages: (\\d+)", replacement="\\1", mydeepcoal[2]));
     cat("Extra lineages observed:", myDist, "\n");
@@ -325,25 +324,17 @@ get.p <- function(sptree, genetreeFile, distVec, sp.treeName = NULL,
         pVec <- c(pVec, 0.0000000001);
       }else{
         p <-  h/H;
-        hist(distVec);
+        hist(distVec,  xlab = 'expected extra lineages', ylab = "Frequency", main=NULL);
         abline(v = myDist, col = "red");
         pVec <- c(pVec, p); 
       }
     }
     myDistVec[i] <- myDist;
   }
-  my.freq <- unique(myDistVec);
-  count <- 1;
-  for(j in my.freq){
-    nVec[count] <- sum(myDistVec == j);
-    count <- count+1;
-  }
-  # N!/ni! * pi^ni
-  # ln N! - ln ni! + ni * ln pi
-  calculation <-  sum(nVec*log(pVec)) - sum(log(factorialZ(nVec))); 
-  return(calculation);
+  output <- list(pVec,myDistVec);
+  names(output) <- c("pVec", "myDistVec");
+  return(output);
 }
-
 # this function gets the N vector
 get.n <- function(myDistVec){
   my.freq <- unique(myDistVec);
@@ -362,4 +353,21 @@ get.L <- function(nVec, pVec, N){
   # ln N! - ln ni! + ni * ln pi
   likelihood <- log(factorialZ(N)) - sum(log(factorialZ(nVec))) + sum(nVec*log(pVec));
   return(likelihood);
+}
+
+getTaxaVec <- function(mygenetrees, Imap){
+  indList <- list()
+  Imap <- as.data.frame(Imap);
+  species <- as.character(unique(Imap$species));
+  for(i in 1:length(mygenetrees)){
+    genetree <- read.tree(mygenetrees[i]);
+    tips <- sort(genetree$tip.label);
+    new.Imap <- Imap[as.character(Imap$traits) %in% tips,];
+    indVec <- NULL;
+    for(j in 1:length(species)){
+      indVec[j]<- sum(new.Imap$species == species[j]);
+    }
+    indList[[i]] <- indVec;
+  }
+  return(indList);
 }

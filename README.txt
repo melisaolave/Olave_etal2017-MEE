@@ -18,7 +18,7 @@ ms (Hudson 2002) located at the same folder than the data. https://uchicago.app.
 Phylonet (Than and Nakhleh 2009). https://bioinfocs.rice.edu/PhyloNet
 
 EXECUTION
-See the tutorial R script (tutorial.R) for an example of how to use the method.
+See the tutorial R script (step-by-step-tutorial.R and quick-tutorial.R) for an example of how to use the method. The new parallel-tutorial.R allows to obtain each model extra lineage distribution in parallel, if multiple cores are available.
 
 COMMENTS
 This method uses most of its time estimating the probability vector, as described in (iii), thus time is very dependent on the number of H gene trees simulated. The method description calculates the distribution using H = 10,000, and it is recommended to use a similar number, specially when very similar models wants to be compared. However, in order to reduce the time consumption, it is possible to estimate the distribution using a small set of simulated gene trees for estimated the p vector (e.g. H = 5,000). Note that this might decrease the method accuracy, and will only be correct if models proposed are very different.

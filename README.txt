@@ -15,7 +15,8 @@ REQUIREMENTS
 functions.R --> github.com/melisaolave/Olave_etal2017-MEE
 ape library installed in R
 ms (Hudson 2002) located at the same folder than the data. https://uchicago.app.box.com/s/l3e5uf13tikfjm7e1il1eujitlsjdx13
-Phylonet (Than and Nakhleh 2009). https://bioinfocs.rice.edu/PhyloNet
+Phylonet (Than and Nakhleh 2009). http://old-bioinfo.cs.rice.edu/phylonet/index.html
+The functions and tutorials are developed for Unix-based systems (Mac or Linux).
 
 EXECUTION
 See the tutorial R script (step-by-step-tutorial.R and quick-tutorial.R) for an example of how to use the method. The new parallel-tutorial.R allows to obtain each model extra lineage distribution in parallel, if multiple cores are available.

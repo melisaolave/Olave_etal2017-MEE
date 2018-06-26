@@ -134,11 +134,17 @@ gf.code2ms <- function(time=0, species1, species2, M=0, all.species){
 }
 
 # execute ms
-ms <- function(totalTaxa, nloci, species, taxaVec, ms.topology, gf.code = NULL, popSize.code = NULL, outputName){
+ms <- function(totalTaxa, nloci, species, taxaVec, ms.topology, gf.code = NULL, popSize.code = NULL,  ms.more.arg = NULL, outputName = "genetrees.txt", ms.exec="./ms", rm.header=T){
   if(length(gf.code) >1){
     gf.code <- paste(gf.code, collapse=" ");
   }
-  command <- paste("./ms", 
+  if("ms" %in% list.files() == F){
+    stop("ms executable not found in working directory.
+         1. Download ms program: http://home.uchicago.edu/rhudson1/source/mksamples.html
+         2. Compile it.
+         3. Paste ms executable in working directory:", wd, "\n...and run again!\n");
+  }
+  command <- paste(ms.exec, 
                    totalTaxa, 
                    nloci, 
                    "-T -I", 
@@ -147,9 +153,17 @@ ms <- function(totalTaxa, nloci, species, taxaVec, ms.topology, gf.code = NULL, 
                    ms.topology,
                    gf.code,
                    popSize.code,
-                   "| tail +4 | grep -v // >", 
+                   ms.more.arg,
+                   ">", 
                    outputName);
+  cat("ms command:", command, "\n");
   system(command);
+  if(rm.header){
+    ms.out <- scan(outputName, what="character", sep="\n");
+    ms.out <- ms.out[4:length(ms.out)];
+    ms.out <- gsub(pattern="//", replacement="", ms.out);
+    write(ms.out, outputName);
+  }
 }
 
 ### write PhyloImap
@@ -388,7 +402,7 @@ get.n <- function(myDistVec){
 }
 
 run.xl.pipeline <- function(wd=getwd(), sptreeName, genetreePattern="tre$",genetree.Path=getwd(), ImapName="Imap.txt",
-                            brlength.correction=NULL, nloci=10000, PhylonetDir="phylonet_v2_3.jar",
+                            ms.exec="./ms", brlength.correction=NULL, nloci=10000, PhylonetDir=NULL,
                             PhyloImapName="PhyloImap.txt", geneTreeTempName="genetree.temp", saveXLVec=T, loadXLvec=F, only.XLvec=F,
                             time=0, species1=0, species2=0, M=0,
                             saveHistogram=T, height=8.27, width=8.27){
@@ -432,7 +446,7 @@ run.xl.pipeline <- function(wd=getwd(), sptreeName, genetreePattern="tre$",genet
   distVecName <- paste("XLvec-",Exp.outputName, sep="");
   if(loadXLvec == F){
     ms(totalTaxa=totalTaxa, nloci=nloci, species=species, taxaVec=taxaVec, ms.topology=topology,
-       gf.code=ms.gf.code, outputName=Exp.outputName);
+       gf.code=ms.gf.code, outputName=Exp.outputName, ms.exec=ms.exec);
     distVec <- sptree.vs.genetrees(wd=wd, PhylonetDir=PhylonetDir, PhyloImapName=PhyloImapName, tree.newick=tree.newick, 
                                    genetreeNames=Exp.outputName, species=species, Imap=Imap, sp.treeName=sptreeName, geneTreeTempName=geneTreeTempName);
   }else{
@@ -466,9 +480,10 @@ run.xl.pipeline <- function(wd=getwd(), sptreeName, genetreePattern="tre$",genet
     return(result);
   }
 }
+
 run.xl.pipeline.parallel <- function(wd=getwd(), model.table, cores=1, sptreeName="sp-tree.tre", genetreePattern="tre$",genetree.Path=getwd(), ImapName="Imap.txt",
-                                     brlength.correction=NULL, nloci=10000, PhylonetDir=getwd(),
-                                     saveHistogram=T, height=8.27, width=height){
+                                     ms.exec="./ms", brlength.correction=NULL, nloci=10000, PhylonetDir=NULL,
+                                     saveHistogram=T, height=8.27, width=8.27){
   library(foreach);
   library(doMC);
   library(ape);
@@ -484,12 +499,12 @@ run.xl.pipeline.parallel <- function(wd=getwd(), model.table, cores=1, sptreeNam
     PhyloImapName <- paste("PhyloImap", i, ".txt", sep="");
     geneTreeTempName <- paste("genetree", i, ".temp", sep="");
     run.xl.pipeline(wd=wd, sptreeName=sptreeName, genetreePattern=genetreePattern, genetree.Path=genetree.Path, ImapName=ImapName,
-                             brlength.correction=brlength.correction, nloci=nloci, PhylonetDir=PhylonetDir,
-                             PhyloImapName=PhyloImapName, geneTreeTempName=geneTreeTempName, saveXLVec=T, loadXLvec=F,
-                             only.XLvec=T,
-                             time=time, species1=species1, species2=species2, M=M,
-                             saveHistogram=saveHistogram, height=height, width=width);
-   
+                    ms.exec=ms.exec, brlength.correction=brlength.correction, nloci=nloci, PhylonetDir=PhylonetDir,
+                    PhyloImapName=PhyloImapName, geneTreeTempName=geneTreeTempName, saveXLVec=T, loadXLvec=F,
+                    only.XLvec=T,
+                    time=time, species1=species1, species2=species2, M=M,
+                    saveHistogram=saveHistogram, height=height, width=width);
+    
   }
   final.table <- data.frame();
   for(i in 1:length(models)){
@@ -501,7 +516,7 @@ run.xl.pipeline.parallel <- function(wd=getwd(), model.table, cores=1, sptreeNam
     PhyloImapName <- paste("PhyloImap", i, ".txt", sep="");
     geneTreeTempName <- paste("genetree", i, ".temp", sep="");    
     table <- run.xl.pipeline(wd=wd, sptreeName=sptreeName, genetreePattern=genetreePattern, genetree.Path=genetree.Path, ImapName=ImapName,
-                             brlength.correction=brlength.correction, nloci=nloci, PhylonetDir=PhylonetDir,
+                             ms.exec=ms.exec, brlength.correction=brlength.correction, nloci=nloci, PhylonetDir=PhylonetDir,
                              PhyloImapName=PhyloImapName, geneTreeTempName=geneTreeTempName, saveXLVec=F, 
                              loadXLvec=T,
                              only.XLvec=F,
